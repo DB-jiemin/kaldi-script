@@ -1,0 +1,232 @@
+问题:
+
+tree的作用是什么,在哪个步骤创建出来的,用的kaldi命令是哪一个?
+
+用到了LDA,但是LDA需要类别标签?这点如何做到的?
+
+原理:
+SAT
+fMLLR
+
+============================================================
+学习的内容
+WFST:三大算法 composition determinization minimization
+    用WFST来表示HCLG
+H:HMM
+C:上下文
+L:lang文件夹下的L.fst
+G:ngram-count 生成的G.fst
+解码器
+维特比算法
+============================================================
+语音识别训练过程:
+0.提取特征
+1.训练   |  1.训练
+2.做图   |  2.对齐
+3.解码   |  3.做图
+4.对齐   |  4.解码
+
+解码过程:
+2.做图
+3.解码
+4.对齐
+
+============================================================
+在画lattice或者hclg的图时可能提示dot命令不存在,安装下面文件即可解决:
+zsh: command no found:dot
+   sudo apt-get install graphviz
+============================================================
+画出lattice图和fst图:
+
+fstdraw --portrait=true --osymbols=data/lang/words.txt foo.fst foo.dot
+
+lattice-to-fst 
+    gunzip -c lat.1.zip | lattice-to-fst --rm-eps=true --acoustic-scale=0.02 --lm-scale=0.01 ark:- ark:- | fstdraw ... | dot -Tpdf > foo.pdf
+
+dot -Tpdf foo.dot > foo.pdf
+============================================================
+声学模型需要准备的文件:
+    spk2gender <speakerID> <gender>
+    wav.scp    <uterranceID> <full_path_to_audio_file>
+    text       <uterranceID> <text_transcription>
+    utt2spk    <uterranceID> <speakerID>
+    corpus.txt <text_transcription>
+============================================================
+语言模型需要准备的文件:
+    lexicon.txt               <word> <phone1> <phone2> ...
+    nonsilence_phones.txt     <phone>
+    silence_phones.txt        <phone>
+============================================================
+train_mono.sh train_deltas.sh train_lda_mllt.sh
+这三个训练的脚本可以使用align_si.sh进行对齐
+解码使用decode.sh脚本即可
+-----------------------------------------------------------
+train_sat.sh
+需要使用align_fmllr.sh进行对齐
+解码使用decode_fmllr.sh进行解码
+============================================================
+一文搞懂HMM(隐马尔可夫模型) https://www.cnblogs.com/skyme/p/4651331.html
+============================================================
+在提取特征之后,应该计算cmvn进行特征归一化.
+============================================================
+训练前后都要做对齐操作!!!!!
+============================================================
+MFCC + LDA + MLLT + fMLLR
+    我们用到的是这四个技术
+CMLLR/fMLLR 约束最大似然线性回归CMLLR,也就是通常所说的特征空间MLLR(fMLLR)
+
+============================================================
+lex.fst指的是L.fst
+============================================================
+1.MFCC特征是13维
+2.delta - delta + delta特征是39维
+3.LDA + MLLT特征是40维
+    该方法是在计算MFCC特征基础上经过LDA(Linear Discriminant Analysis)变换得到,默认维是40维,估计、且经过多次迭代,对角转换MLLT 或 CTC.(具体细节:http://kaldi-asr.org/doc/transform.html)
+
+=========================train部分==========================
+4.train_mono.sh
+    通过delta-delta特征训练--monophone模型
+    训练一阶差分特征(我感觉是^_^)
+    该脚本将为每个speaker应用cmn
+
+5.train_deltas.sh
+    通过deltas-deltas+deltas特征训练模型
+    二阶差分
+
+6.train_sat.sh
+    SAT(Speaker Adapted Training)说话者适应训练,SAT可以在LDA + MLLT或者 delta 和 delta-delta特征上训练,if there are no transforms supplied in the alignment directory, is will estimate transforms itself befor building the tree if there are no Trainings supplied in the alignment directory, is will estimate transforms itself befor building the tree(and in any case, it estimates transforms a number of times during training).
+
+7.train_lda_mllt.sh
+    LDA + MLLT引用方法:在计算MFCC特征之后,进行转换.通过拼接交叉的一些帧,通过使用LDA降低维数,默认维数是40.然后在多次迭代中估计,对角MLLT或CTC被认为是一个对角转换.(具体细节:http://kaldi-asr.org/doc/transform.html)
+    会得到一些.mat的文件,这些文件是用来做全局特征变换用的
+=========================mkgraph部分=========================
+8.mkgraph.sh
+    这个脚本通过HCLG(代表了语言模型、发音字典、上下文依赖和HMM模型),输出一个FST(有限状态机),FST的输入是words-id,输入是pdf-ids(这些indexes用于解析高斯混合模型)(具体请看http://kaldi-asr.org/doc/graph_recipe_test.html)
+
+=========================decode部分==========================
+9.decode.sh
+    --transform-dir选项支持已经存在的fMLLR转换
+    trans.1 和 fMLLR有什么关系? trans.1是做的全局变换
+    trans.1 就是做了fMLLR转换的结果
+    我怎么感觉trans.1和SAT没什么关系?
+
+10.decode_fmllr.sh
+    在这个脚本中有三个model可能被用到:
+    1.Decoding script that does fMLLR.  This can be on top of delta+delta-delta, or LDA+MLLT features.
+     There are 3 models involved potentially in this script,
+     and for a standard, speaker-independent system they will all be the same.
+     The "alignment model" is for the 1st-pass decoding and to get the
+     Gaussian-level alignments for the "adaptation model" the first time we
+     do fMLLR.  The "adaptation model" is used to estimate fMLLR transforms
+     and to generate state-level lattices.  The lattices are then rescored
+     with the "final model".
+                 
+     The following table explains where we get these 3 models from.
+     Note: $srcdir is one level up from the decoding directory.
+Model              Default source:
+
+      "alignment model"   $srcdir/final.alimdl              --alignment-model <model>
+                         (or $srcdir/final.mdl if alimdl absent)
+      "adaptation model"  $srcdir/final.mdl                 --adapt-model <model>
+      "final model"       $srcdir/final.mdl                 --final-model <model>
+
+=========================align部分===========================
+
+11.align_si.sh
+    计算训练对齐方式,delta 或者 LDA + MLLT特征
+    也就是说这个脚本支持 train_mono.sh 和 train_deltas.sh两个脚本的训练结果的对齐
+    如果选择了--use-graphs true选项,它将使用它进行训练
+    graphs 存放在source directory下
+    nj 必须和source directory下的num_jobs的数量要匹配
+
+12.align_fmllr.sh    
+    对齐操作,假设特征是(LDA + MLLT or delta + delta - delta) + fMLLR(可能有SAT模型),使用final.alimdl计算第一次对齐(或final.mdl 当没有final.alimdl时),然后做两次迭代fMLLR估计.
+
+
+=========================other===========================
+add-deltas
+    添加deltas到原始的mfcc特征 或者 plp特征
+
+add-self-loops
+    添加自循环和转移概率到转换器上
+    选项:--self-loop-scale=float 数值
+         表示依赖的LM,默认1
+
+align-text
+    align-text ark:1.txt ark:2.txt ark,t:aligment.txt
+    对齐两个字符串,输出到对齐文件 
+
+ali-to-phones
+    转换模型层次对齐到音素序列的对齐
+    ali-to-phones <model> <aligments-rspecifier> <phone-transcript-wspecifier|ctm-wxfilename>
+
+compile-train-graphs
+    在steps/align_fmllr.sh中有引用
+
+splice-feats
+    拼合特征,左右上下文.
+    --left-context 左侧上下文,默认 =4
+    --right-context 右侧上下文,默认 =4
+    如果按照默认的配置,加上中间的1帧,一共为9帧
+
+weight-silence-post
+    weight-silence-post <silence-weight> <silence-phones> <model> <posteriors-rspecifier> <posteriors-wspecifier>
+    当silence-weight设置成0.0时,表示静音检测
+    消除静音帧的方式就是通过下调静音音素的后验概率
+
+compose-transforms
+    组合(affine仿射 或 linear线性)特征转换
+    c=a*b 如果a是affine仿射特征就不单单是乘法
+
+transform-feats
+    转换特征:如果是线性特征,则转换的特征等于原始的特征维度
+             如果是仿射特征,则转换的特征等于原始的特征维度 + 1
+
+copy-feats
+    可以进行特征的转换,ark文件的特征无法读取,可以通过copy-feats进行转换成text形式!
+
+matrix-dim
+    print dimension info on an input matrix to standard ouput
+    usage: matrix-dim [options] <matrix-in>|<in-rspecifier>
+    e.g.:matrix-dim final.mat | cut -f 2
+
+gmm-align
+    在给定的GMM模型上对齐特征
+	usage: gmm-align [options] tree-in model-in lexicon-fst-in feature-rspecifier transcriptions-rspecifier alignments-wspecifier
+	e.g.: 
+	    gmm-align tree 1.mdl lex.fst scp:train.scp ark:train.tra ark:1.ali
+
+gmm-copy
+    可以查看final.mdl的内容信息
+	gmm-copy --binary=false mdl-in mdl-out
+	e.g. gmm-copy --binary=false final.mdl out.txt
+    第一个<ForPhones>定义的是有效音素的转移概率初始值	
+	第二个<ForPhones>定义的是无实际意义的音素转移概率初始值,例如:silice等
+	kaldi里面的HMM没有发射状态,它把发射状态和最后的结束状态合二为一了
+	<Triples>共有三列 分别表示:phone,state,id
+	<LogProbs>表示id对应的自跳转和跳转到其后状态的概率
+    <GCONSTS>表示GMM的前项系数
+	<WEIGHTS>表示各个高斯的权重
+	<MEANS_INVVARS>/<INV_VARS>是均值/方差.
+	
+gmm-boost-silence
+    usage:gmm-boost-silence [options] <silence-phones-list> <model-in> <model-out>
+    提升所有<silence-phones-list>列表中的权重
+    e.g.: gmm-boost-silence --boost=1.5 1:2:3 1.mdl 1_boostsil.mdl
+    options:
+        --boost  指定将权重提升到多少,默认是1.5
+	--binary 写入的文件是否是二进制格式,默认true
+
+gmm-est-fmllr-gpost
+   估计全局fMLLR转换,在以下两者之一:per utterance 或 使用 --sak2utt选项提供.读入高斯后验概率,写入到矩阵表中.
+   usage:gmm-est-fmllr-gpost [options] <model-in> <feature-rspecifier> <gpost-rspecifier> <transform-wspecifier>
+
+gmm-latgen-faster
+    使用gmm模型生成lattices
+    usage: gmm-latgen-faster [options] model-in (fst-in | fsts-rspecifier) features-rspecifier lattice-wspecifier [words-wspecifier [alignments-wspecifier]]
+
+lattice-prune
+    usage: lattice-prune [options] lattice-rspecifier lattice-wspecifier
+    e.g.: lattice-prune --acoustic=0.1 --beam=4.0 ark:1.lats ark:pruned.lats
+    对lattice进行剪枝操作,通过设定beam进行剪枝
+
