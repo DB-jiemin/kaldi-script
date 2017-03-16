@@ -1,3 +1,9 @@
+kaldi 学习网站: https://www.eleanorchodroff.com/tutorial/intro.html
+============================================================
+train 训练语料,用于模型训练
+dev 开发集,用于模型参数调优
+test 用于测试
+============================================================
 问题:
 
 tree的作用是什么,在哪个步骤创建出来的,用的kaldi命令是哪一个?
@@ -18,6 +24,7 @@ L:lang文件夹下的L.fst
 G:ngram-count 生成的G.fst
 解码器
 维特比算法
+语音识别算法细节
 ============================================================
 语音识别训练过程:
 0.提取特征
@@ -230,3 +237,20 @@ lattice-prune
     e.g.: lattice-prune --acoustic=0.1 --beam=4.0 ark:1.lats ark:pruned.lats
     对lattice进行剪枝操作,通过设定beam进行剪枝
 
+feat-to-dim
+    Reads an archive of features.  
+    If second argument is wxfilename, writes the feature dimension of the first feature file;
+    If second argument is wspecifier, writes an archive of the feature dimension, indexed by utterance id.
+    Usage: feat-to-dim [options] <feat-rspecifier> (<dim-wspecifier>|<dim-wxfilename>)
+    e.g.: feat-to-dim scp:feats.scp -
+
+copy-matrix
+    Copy matrices, or archives of matrices 
+    Also see copy-feats which has other format options
+    Usage: copy-matrix [options] <matrix-in-rspecifier> <matrix-out-wspecifier>
+       or: copy-matrix [options] <matrix-in-rxfilename> <matrix-out-wxfilename>
+     e.g.: copy-matrix --binary=false 1.mat -
+           copy-matrix ark:2.trans ark,t:-
+
+compute-cmvn-stats-two-channel
+    
