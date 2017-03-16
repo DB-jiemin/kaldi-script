@@ -1,0 +1,284 @@
+==========================
+   librispeech recipe
+==========================
+1.make_mfcc.sh
+    存在segments文件会调用kaldi的extract-segments  compute-mfcc-feats 和 copy-feats
+    若不存在segments则调用kaldi的compute-mfcc-feats  copy-feats
+2.compute_cmvn_stats.sh
+    feat-to-dim 计算特征的维度
+    copy-matrix
+    compute-cmvn-stats-two-channel
+    compute-cmvn-stats
+    modify-cmvn-stats
+    cmpute-cmvn-stats
+3.train_mono.sh
+    apply-cmvn
+    feat-to-dim
+    gmm-init-mono
+    subset-feats
+    compile-train-graphs
+    align-equal-compiled
+    gmm-acc-stats-ali
+    gmm-est
+    gmm-sum-accs 
+    gmm-boost-silence
+    gmm-align-compiled
+    gmm-acc-stats-ali
+    gmm-est
+4.mkgraph.sh
+    tree-info
+    fsttablecompose
+    fstdeterminizestar
+    fstminimizeencoded
+    fstpushspecial
+    fstarcsort
+    fstisstochastic
+    fstcomposecontext
+    fstarcsort
+    fstisstochastic
+    make-h-transducer
+    fstablecompose
+    fstdeterminizestar
+    fstrmsymbols
+    fstrmepsloacl
+    fstminimizeencoded
+    fstisstochastic
+    add-self-loops
+    fstisstochastic
+    am-info
+5.decode.sh
+    如果特征类型是:delta
+        apply-cmvn add-deltas
+    如果特征类型是:lda
+        apply-cmvn splice-feats transform-feats
+    copy-feats
+    transform-feats
+    gmm-latgen-faster
+    5.1 score.sh 
+        lattice-scale
+        lattice-add-penalty
+        lattice-best-path
+        compute-wer
+
+5.align_si.sh
+    如果特征类型是delta:则使用apply-cmvn 和 add-deltas
+    如果特征类型是lda:则使用apply-cmvn splice-feats transform-feats
+    apply-cmvn
+    add-deltas
+    splice-feats
+    transform-feats
+    gmm-boost-silence
+    gmm-align-compiled
+    compile-train-graphs
+    gmm-align-compiled
+6.train_deltas.sh
+    apply-cmvn
+    add-deltas
+    acc-tree-stats
+    sum-tree-stats
+    cluster-phones
+    compile-questions
+    build-tree
+    gmm-init-model
+    gmm-mixup
+    convert-ali
+    compile-train-graphs
+    gmm-boost-silence
+    gmm-align-compiled
+    gmm-acc-stats-ali
+    gmm-est
+7.mkgraph.sh
+8.decode.sh
+9.lmrescore.sh
+    fstproject
+    fstprint
+    fstcompile
+    fstdeterminizestar
+    fstrmsymbols
+    根据mode进行选择:当mode=1时
+        lattice-lmrescore
+    根据mode进行选择:当mode=2时
+        lattice-scale
+        lattice-compose
+        lattice-determinize
+        lattice-scale
+        lattice-compose
+        lattice-determinize
+    根据mode进行选择:当mode=3时
+        lattice-scale
+	lattice-compose
+	lattice-determinize
+	lattice-scale
+	lattice-compose
+	lattice-determinize
+    根据mode进行选择:当mode=4时
+        lattice-scale
+	lattice-to-phone-lattice
+	lattice-compose
+	lattice-determinize
+	lattice-compose
+	lattice-add-trans-probs
+10.lmrescore_const_arpa.sh
+    lattice-lmrescore
+    lattice-lmrescore-cost-arpa
+11.align_si.sh
+12.train_lda_mllt.sh
+    apply-cmvn
+    splice-feats
+    transform-feats
+    如果stage 小于等于 -5:
+        ali-to-post
+        weight-silence-post
+        acc-lda
+        est-lda
+    如果stage 小于等于 -4:
+        acc-tree-stats
+	sum-tree-stats
+    如果stage 小于等于 -3:
+        cluster-phones
+	compile-questions
+	build-tree
+    如果stage 小于等于 -2:
+        如果 train_tree为true:
+	    gmm-init-model
+        否则:
+	    gmm-init-model-flat
+    如果stage 小于等于 -1:
+        convert-ali
+    如果stage 小于等于 0:
+        compile-train-graphs
+    当x -lt num_iter时:
+	gmm-boost-silence
+        gmm-align-compile
+	ali-to-post
+	weight-silence-post
+	gmm-acc-mllt
+	est-mllt
+	gmm-transform-means
+	compose-transforms
+	apply-cmvn
+	splice-feats
+	transform-feats
+	如果stage -le x:
+	    gmm-acc-stats-ali
+	    gmm-est
+13.mkgraph.sh
+14.decode.sh
+15.lmrescore.sh
+16.lmrescore_const_arpa.sh
+17.align_si.sh
+18.train_sat.sh
+    判断上一次对齐后的文件下是否有final.mat文件,如果有则特征类型是lda,否则特征类型是delta
+    delta特征:
+        apply-cmvn
+	add-deltas
+    lda特征:
+        apply-cmvn
+	splice-feats
+	transform-feats
+    如果trans.1存在:
+        transform-feats
+    否则判断stage -le -5:
+        ali-to-post
+	weight-silence-post
+	gmm-est-fmllr
+	transform-feats
+    否则判断stage -le -4:
+        acc-tree-stats
+	sum-tree-stats
+    否则判断stage -le -3:
+        cluster-phones
+	compile-questions
+	build-tree
+    否则判断stage -le -2:
+	判断train_tree是否为true:
+            gmm-init-model
+	否则:
+	    gmm-init-model-flat
+    否则判断stage -le -1:
+        convert-ali
+    如果exit_atage -eq 0:
+        compile-train-graphs
+    当x -lt num_iters:
+        gmm-boost-silence
+	gmm-align-compiled
+	ali-to-post
+	weight-silence-post
+	gmm-est-fmllr
+	compose-transforms
+	transform-feats
+	如果stage -le x:
+	    gmm-acc-stats-ali
+	    gmm-est
+    当stage -le x:
+        ali-to-post
+	gmm-acc-stats-twofeats
+	gmm-est
+	gmm-sum-accs
+19.mkgraph.sh
+20.decode_fmllr.sh
+    am-info
+    根据final.mat文件是否存在判断特征类型是lda否则为delta
+    根据特征类型为delta:
+        apply-cmvn
+	add-deltas
+    特征类型lda:
+        apply-cmvn
+	splice-feats
+	transform-feats
+    如果stage -le 1:
+        lattice-to-post
+	weight-silence-post
+	gmm-post-to-gpost
+	gmm-est-fmllr-gpost
+    如果stage -le 2:
+        am-info
+	gmm-latgen-faster
+    如果stage -le 3:
+        lattice-determinize-pruned
+	lattice-to-post
+	weight-silence-post
+	gmm-est-fmllr
+	compose-transforms
+
+    transform-feats
+    如果stage -le 4:
+        gmm-rescore-lattice
+	lattice-determinize-pruned
+    如果stage -le 5:
+        steps/diagnostic/analyze_lats.sh
+21.lmrescore.sh
+22.lmrescore_const_arpa.sh
+23.align_fmllr.sh
+    根据final.mat判断特征类型为lda,否则为delta
+    delta特征:
+        apply-cmvn
+	add-deltas
+    lda特征:
+        apply-cmvn
+	splice-feats
+	transforms
+    如果use_graphs为true:
+        gmm-boost-silence
+        compile-train-graphs
+    如果stage -le 1:
+        gmm-align-compiled
+    如果stage -le 2:
+	如果 alimdl != mdl:
+            ali-to-post
+    	    weight-silence-post
+    	    gmm-post-to-gpost
+	    gmm-est-fmllr-gpost
+	否则:
+	    ali-to-post
+	    weight-silence-post
+	    gmm-est-fmllr
+    如果stage -le 3:
+        gmm-align-compiled
+24.train_sat.sh
+25.mkgraph.sh
+26.decode_fmllr.sh
+27.lmrescore.sh
+28.lmrescore_const_arpa.sh
+29.lmrescore_const_arpa.sh
+
