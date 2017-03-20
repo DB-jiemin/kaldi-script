@@ -252,5 +252,12 @@ copy-matrix
      e.g.: copy-matrix --binary=false 1.mat -
            copy-matrix ark:2.trans ark,t:-
 
+compute-mfcc-feats
+    Usage:  compute-mfcc-feats [options...] <wav-rspecifier> <feats-wspecifier>
+    wav-rspecifier指的是wav.scp文件
+    feats-wspecifier指的是feats.ark文件
+    使用方法:
+        compute-mfcc-feats scp:wav.scp ark:feats.ark
+
 compute-cmvn-stats-two-channel
     
