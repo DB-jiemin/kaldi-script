@@ -91,33 +91,83 @@ lex.fst指的是L.fst
     该方法是在计算MFCC特征基础上经过LDA(Linear Discriminant Analysis)变换得到,默认维是40维,估计、且经过多次迭代,对角转换MLLT 或 CTC.(具体细节:http://kaldi-asr.org/doc/transform.html)
 
 =========================train部分==========================
-4.train_mono.sh
+4.train_mono.sh [options] <data-dir> <lang-dir> <exp-dir>
     通过delta-delta特征训练--monophone模型
     训练一阶差分特征(我感觉是^_^)
     该脚本将为每个speaker应用cmn
+    usage: steps/train_mono.sh [options] <data-dir> <lang-dir> <exp-dir>
+     e.g.: steps/train_mono.sh data/train.1k data/lang exp/mono
+    <data-dir>:数据路径
+    <lang-dir>:lang文件夹路径
+    <exp-dir>:mono模型存放路径
 
 5.train_deltas.sh
     通过deltas-deltas+deltas特征训练模型
     二阶差分
+    usage: steps/train_deltas.sh <num-leaves> <tot-gauss> <data-dir> <lang-dir> <alignment-dir> <exp-dir>
+     e.g.: steps/train_deltas.sh 2000 10000 data/train_si84_half data/lang exp/mono_ali exp/tri1
+    <num-leaves>:初始高斯数
+    <tot-gauss>:高斯总数
+    <data-dir>:数据路径
+    <lang-dir>:lang文件夹路径
+    <alignment-dir>:之前执行align_si.sh结果存放路径
+    <exp-dir>:模型存放路径
 
 6.train_sat.sh
     SAT(Speaker Adapted Training)说话者适应训练,SAT可以在LDA + MLLT或者 delta 和 delta-delta特征上训练,if there are no transforms supplied in the alignment directory, is will estimate transforms itself befor building the tree if there are no Trainings supplied in the alignment directory, is will estimate transforms itself befor building the tree(and in any case, it estimates transforms a number of times during training).
-
+    usage: steps/train_sat.sh <#leaves> <#gauss> <data> <lang> <ali-dir> <exp-dir>
+     e.g.: steps/train_sat.sh 2500 15000 data/train_si84 data/lang exp/tri2b_ali_si84 exp/tri3b
+    <#leaves>:初始高斯数
+    <#gauss>:高斯总数
+    <data>:数据路径
+    <lang>:lang文件夹路径
+    <ali-dir>:对齐文件路径,上次执行对齐操作存放的路径
+    <exp-dir>:模型存放路径
+    
 7.train_lda_mllt.sh
     LDA + MLLT引用方法:在计算MFCC特征之后,进行转换.通过拼接交叉的一些帧,通过使用LDA降低维数,默认维数是40.然后在多次迭代中估计,对角MLLT或CTC被认为是一个对角转换.(具体细节:http://kaldi-asr.org/doc/transform.html)
     会得到一些.mat的文件,这些文件是用来做全局特征变换用的
+    usage: steps/train_lda_mllt.sh [options] <#leaves> <#gauss> <data> <lang> <alignments> <dir>
+     e.g.: steps/train_lda_mllt.sh 2500 15000 data/train_si84 data/lang exp/tri1_ali_si84 exp/tri2b
+    <#leaves>:初始高斯数
+    <#gauss>:高斯总数
+    <data>:数据路径
+    <lang>:lang文件路径
+    <alignments>:对齐文件路径,上次执行对齐操作存放的路径
+    <exp-dir>:模型存放路径
+
+8.steps/make_denlats.sh
+    做一个标准的lattices
+    usage:steps/make_denlats.sh [options] <data-dir> <lang-dir> <src-dir> <exp-dir>
+     e.g.:steps/make_denlats.sh data/train data/lang exp/tri1 exp/tri1_denlats
+    works for (delta|lda) features, and (with --transform-dir option) such features plus transforms
+    data-dir:数据路径,给出数据路径
+    lang-dir:lang文件路径
+    src-dir:上一次训练好的模型路径
+    exp-dir:denominstor lattices 存放路径
+
 =========================mkgraph部分=========================
-8.mkgraph.sh
+9.mkgraph.sh
     这个脚本通过HCLG(代表了语言模型、发音字典、上下文依赖和HMM模型),输出一个FST(有限状态机),FST的输入是words-id,输入是pdf-ids(这些indexes用于解析高斯混合模型)(具体请看http://kaldi-asr.org/doc/graph_recipe_test.html)
+    usage: utils/mkgraph.sh [options] <lang-dir> <model-dir> <graphdir>
+     e.g.: utils/mkgraph.sh data/lang_test exp/tri1/ exp/tri1/graph
+    <lang-dir>:lang文件路径
+    <model-dir>:模型存放路径,对应的是train_xx.sh的exp-dir
+    <graphdir>:图存放路径,一般都是在model下面的graph文件夹下
 
 =========================decode部分==========================
-9.decode.sh
+10.decode.sh
     --transform-dir选项支持已经存在的fMLLR转换
     trans.1 和 fMLLR有什么关系? trans.1是做的全局变换
     trans.1 就是做了fMLLR转换的结果
     我怎么感觉trans.1和SAT没什么关系?
+    usage: steps/decode.sh [options] <grpah-dir> <data-dir> <decode-dir>
+     e.g.: steps/decode.sh exp/mono/graph_tgpr data/test_dev93 exp/mono/decode_dev93_tgpr
+    <grpah-dir>:mkgraph.sh里面的graphdir的路径
+    <data-dir>:解码的数据路径
+    <decode-dir>:解码结果存放路径
 
-10.decode_fmllr.sh
+11.decode_fmllr.sh
     在这个脚本中有三个model可能被用到:
     1.Decoding script that does fMLLR.  This can be on top of delta+delta-delta, or LDA+MLLT features.
      There are 3 models involved potentially in this script,
@@ -136,73 +186,131 @@ Model              Default source:
                          (or $srcdir/final.mdl if alimdl absent)
       "adaptation model"  $srcdir/final.mdl                 --adapt-model <model>
       "final model"       $srcdir/final.mdl                 --final-model <model>
-
+    ----------------------------------------------------------
+    该脚本可以解码delta+delta-delta 或者 LDA+MLLT特征
+    usage: steps/decode_fmllr.sh [options] <graph-dir> <data-dir> <decode-dir>
+     e.g.: steps/decode_fmllr.sh exp/tri2b/graph_tgpr data/test_dev93 exp/tri2b/decode_dev93_tgpr
+    <graph-dir>:图存放路径,对应模型下的graph文件夹下,
+    <data-dir>:解码数据
+    <decode-dir>:解码结果存放路径
+    ----------------------------------------------------------
 =========================align部分===========================
 
-11.align_si.sh
+12.align_si.sh
     计算训练对齐方式,delta 或者 LDA + MLLT特征
     也就是说这个脚本支持 train_mono.sh 和 train_deltas.sh两个脚本的训练结果的对齐
     如果选择了--use-graphs true选项,它将使用它进行训练
     graphs 存放在source directory下
     nj 必须和source directory下的num_jobs的数量要匹配
-
-12.align_fmllr.sh    
+    usage: steps/align_si.sh <data-dir> <lang-dir> <src-dir> <align-dir>
+     e.g.: steps/align_si.sh data/train data/lang exp/tri1 exp/tri1_ali
+    <data-dir>:对齐数据,一般是train或dev数据,通常是train数据,应为用train训练的
+    <lang-dir>:lang文件夹
+    <src-dir>:模型存放的路径
+    <align-dir>:对齐文件存放路径
+    
+13.align_fmllr.sh    
     对齐操作,假设特征是(LDA + MLLT or delta + delta - delta) + fMLLR(可能有SAT模型),使用final.alimdl计算第一次对齐(或final.mdl 当没有final.alimdl时),然后做两次迭代fMLLR估计.
-
+    usage: steps/align_fmllr.sh <data-dir> <lang-dir> <src-dir> <align-dir>
+     e.g.: steps/align_fmllr.sh data/train data/lang exp/tri1 exp/tri1_ali
+    <data-dir>:数据路径,打data/train
+    <lang-dir>:lang文件夹路径
+    <src-dir>:模型存放路径
+    <align-dir>:对齐文件存放路径
 
 =========================other===========================
 add-deltas
     添加deltas到原始的mfcc特征 或者 plp特征
-
+    usage: add-deltas [options] in-rspecifier out-wspecifier
+     e.g.: add-deltas ark:aaa.ark ark,t:-
+           将aaa.ark添加deltas后,以文本的形式输出到屏幕上
+-----------------------------------------------------------------------------------------
 add-self-loops
     添加自循环和转移概率到转换器上
-    选项:--self-loop-scale=float 数值
+    选项:--self-loop-scale=float 数值 (Scale for self-loop probabilities relative to LM.)
          表示依赖的LM,默认1
-
+    usage: add-self-loops [options] transition-gmm/acoustic-model [fst-in] [fst-out]
+     e.g.: add-self-loops --self-loop-scale=0.1 1.mdl HCLGa.fst HCLG.fst
+-----------------------------------------------------------------------------------------
 align-text
     align-text ark:1.txt ark:2.txt ark,t:aligment.txt
     对齐两个字符串,输出到对齐文件 
+    usage: align-text [option] <text1-rspecifier> <test2-rspecifier> <alignment-wspecifier>
+     e.g.: align-text ark:text1.txt ark:text2.txt ark,t:alignment.txt
 
+-----------------------------------------------------------------------------------------
 ali-to-phones
     转换模型层次对齐到音素序列的对齐
-    ali-to-phones <model> <aligments-rspecifier> <phone-transcript-wspecifier|ctm-wxfilename>
-
+    usage: ali-to-phones [options] <model> <aligments-rspecifier> <phone-transcript-wspecifier|ctm-wxfilename>
+     e.g.: ali-to-phones 1.mdl ark:1.ali ark:phones.tra
+     or
+           ali-to-phones --ctm-output 1.mdl ark:1.ali 1.ctm
+-----------------------------------------------------------------------------------------
 compile-train-graphs
     在steps/align_fmllr.sh中有引用
-
+    usage: compile-train-graphs [options] <tree-in> <model-in> <lexicon-fst-in> <transcriptions-rspecifier> <graphs-wspecifier>
+     e.g.: compile-train-graphs tree 1.mdl lex.fst ark:train.tra ark:graphs.fsts
+    <tree-in>:tree,使用bulid-tree建立的树
+    <model-in>:model,例如:exp/tri1b下面的1.mdl或者final.mdl
+    <lexicon-fst-in>:就是L.fst
+    <transcriptions-rspecifier>:
+        oov=`cat $lang/oov.int`
+        ark:utils/sym2int.pl --map-oov $oov -f 2- $lang/words.txt $sdata/JOB/text|
+    <graphs-wspecifier>:graphs.fsts,也可以是fsts.JOB.gz解压出来的,例如:ark:|gzip -c > $dir/fsts.JOB.gz
+-----------------------------------------------------------------------------------------
 splice-feats
     拼合特征,左右上下文.
     --left-context 左侧上下文,默认 =4
     --right-context 右侧上下文,默认 =4
     如果按照默认的配置,加上中间的1帧,一共为9帧
-
+    usage: splice-feats [options] <feature-rspecifier> <feature-wspecifier>
+     e.g.: splice-feats scp:feats.scp ark:-
+    <feature-rspecifier>:feats.scp文件
+    <feature-wspecifier>:输出文件
+-----------------------------------------------------------------------------------------
 weight-silence-post
-    weight-silence-post <silence-weight> <silence-phones> <model> <posteriors-rspecifier> <posteriors-wspecifier>
     当silence-weight设置成0.0时,表示静音检测
     消除静音帧的方式就是通过下调静音音素的后验概率
-
+    usage: weight-silence-post <silence-weight> <silence-phones> <model> <posteriors-rspecifier> <posteriors-wspecifier>
+     e.g.: weight-silence-post 0.0 1:2:3 1.mdl ark:1.post ark:nosil.post
+    <silence-weight>:静音权重
+    <silence-phones>:静音音素列表,用分号隔开
+    <model>:exp/tri1b下面的mdl文件
+    <posteriors-rspecifier>:输入的带有silence文件,可以使用ali-to-post
+    <posteriors-wspecifier>:输入没有silence文件
+----------------------------------------------------------------------------------------- 
 compose-transforms
     组合(affine仿射 或 linear线性)特征转换
     c=a*b 如果a是affine仿射特征就不单单是乘法
-
+    usage: compose-transforms [options] (<transform-A-rspecifier>|<transform-A-rxfilename>) (<transform-B-rspecifier>|<transform-B-rxfilename>) (<transform-out-wspecifier>|<transform-out-wxfilename>)
+     e.g.: compose-transform 1.mat 2.mat 3.mat
+           compose-transform 1.mat ark:2.trans ark:3.trans
+	   compose-transform ark:1.trans ark:2.trans ark:3.trans
+----------------------------------------------------------------------------------------- 
 transform-feats
     转换特征:如果是线性特征,则转换的特征等于原始的特征维度
              如果是仿射特征,则转换的特征等于原始的特征维度 + 1
-
+    usage: transform-feats [options] (<transform-rspecifier>|<transform-rxfilename>) <feats-rspecifier> <feats-wspecifier>
+     e.g.: transform-feats $srcdir/final.mat ark:- ark:-
+-----------------------------------------------------------------------------------------
 copy-feats
     可以进行特征的转换,ark文件的特征无法读取,可以通过copy-feats进行转换成text形式!
-
+    usage: copy-feats [options] <feature-rspecifier> <feature-wspecifier>
+        or copy-feats [options] <feats-rxfilename> <feats-wxfilename>
+     e.g.: copy-feats ark:- ark,scp:foo.ark,foo.scp
+        or copy-feats ark:foo.ark ark,t:txt.ark
+-----------------------------------------------------------------------------------------
 matrix-dim
+    获取矩阵的维数,mat文件的维度
     print dimension info on an input matrix to standard ouput
     usage: matrix-dim [options] <matrix-in>|<in-rspecifier>
     e.g.:matrix-dim final.mat | cut -f 2
-
+----------------------------------------------------------------------------------------- 
 gmm-align
     在给定的GMM模型上对齐特征
-	usage: gmm-align [options] tree-in model-in lexicon-fst-in feature-rspecifier transcriptions-rspecifier alignments-wspecifier
-	e.g.: 
-	    gmm-align tree 1.mdl lex.fst scp:train.scp ark:train.tra ark:1.ali
-
+    usage: gmm-align [options] tree-in model-in lexicon-fst-in feature-rspecifier transcriptions-rspecifier alignments-wspecifier
+    e.g.: gmm-align tree 1.mdl lex.fst scp:train.scp ark:train.tra ark:1.ali
+----------------------------------------------------------------------------------------- 
 gmm-copy
     可以查看final.mdl的内容信息
 	gmm-copy --binary=false mdl-in mdl-out
@@ -215,7 +323,7 @@ gmm-copy
     <GCONSTS>表示GMM的前项系数
 	<WEIGHTS>表示各个高斯的权重
 	<MEANS_INVVARS>/<INV_VARS>是均值/方差.
-	
+----------------------------------------------------------------------------------------- 
 gmm-boost-silence
     usage:gmm-boost-silence [options] <silence-phones-list> <model-in> <model-out>
     提升所有<silence-phones-list>列表中的权重
@@ -223,27 +331,27 @@ gmm-boost-silence
     options:
         --boost  指定将权重提升到多少,默认是1.5
 	--binary 写入的文件是否是二进制格式,默认true
-
+----------------------------------------------------------------------------------------- 
 gmm-est-fmllr-gpost
    估计全局fMLLR转换,在以下两者之一:per utterance 或 使用 --sak2utt选项提供.读入高斯后验概率,写入到矩阵表中.
    usage:gmm-est-fmllr-gpost [options] <model-in> <feature-rspecifier> <gpost-rspecifier> <transform-wspecifier>
-
+----------------------------------------------------------------------------------------- 
 gmm-latgen-faster
     使用gmm模型生成lattices
     usage: gmm-latgen-faster [options] model-in (fst-in | fsts-rspecifier) features-rspecifier lattice-wspecifier [words-wspecifier [alignments-wspecifier]]
-
+----------------------------------------------------------------------------------------- 
 lattice-prune
     usage: lattice-prune [options] lattice-rspecifier lattice-wspecifier
     e.g.: lattice-prune --acoustic=0.1 --beam=4.0 ark:1.lats ark:pruned.lats
     对lattice进行剪枝操作,通过设定beam进行剪枝
-
+----------------------------------------------------------------------------------------- 
 feat-to-dim
     Reads an archive of features.  
     If second argument is wxfilename, writes the feature dimension of the first feature file;
     If second argument is wspecifier, writes an archive of the feature dimension, indexed by utterance id.
     Usage: feat-to-dim [options] <feat-rspecifier> (<dim-wspecifier>|<dim-wxfilename>)
     e.g.: feat-to-dim scp:feats.scp -
-
+----------------------------------------------------------------------------------------- 
 copy-matrix
     Copy matrices, or archives of matrices 
     Also see copy-feats which has other format options
@@ -251,13 +359,18 @@ copy-matrix
        or: copy-matrix [options] <matrix-in-rxfilename> <matrix-out-wxfilename>
      e.g.: copy-matrix --binary=false 1.mat -
            copy-matrix ark:2.trans ark,t:-
-
+----------------------------------------------------------------------------------------- 
 compute-mfcc-feats
     Usage:  compute-mfcc-feats [options...] <wav-rspecifier> <feats-wspecifier>
     wav-rspecifier指的是wav.scp文件
     feats-wspecifier指的是feats.ark文件
     使用方法:
         compute-mfcc-feats scp:wav.scp ark:feats.ark
-
+----------------------------------------------------------------------------------------- 
 compute-cmvn-stats-two-channel
-    
+----------------------------------------------------------------------------------------- 
+wav-to-duration
+    输出wav文件时长
+    usage: wav-to-duration [options] <wav-rspecifier> <duration-wspecifier>
+     e.g.: wav-to-duration scp:wav.scp ark,t:-
+-----------------------------------------------------------------------------------------
