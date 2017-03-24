@@ -197,14 +197,24 @@ lex.fst指的是L.fst
     <lang>:lang文件夹路径
     <ali-dir>:对齐文件路径,上次得到的对齐文件路径
     <exp-dir>:训练模型文件,得到的训练模型文件
+-----------------------------------------------------------
+12.steps/train_mpe.sh (MPE最小音素错误,和steps/train_mpe.sh相似)
+    Usage: steps/train_mmi.sh <data> <lang> <ali> <denlats> <exp>
+     e.g.: steps/train_mmi.sh data/train_si84 data/lang exp/tri2b_ali_si84 exp/tri2b_denlats_si84 exp/tri2b_mmi
+     --boost <boost-weight> (e.g. 0.1) for boosted MMI 默认0
+    <data>:数据路径
+    <lang>:lang文件夹路径
+    <ali>:上次对齐产生的文件路径
+    <denlats>:使用steps/make_denlats.sh产生的文件路径
+    <exp>:mmi模型存放路径
 =========================mkgraph部分=========================
 11.mkgraph.sh
     这个脚本通过HCLG(代表了语言模型、发音字典、上下文依赖和HMM模型),输出一个FST(有限状态机),FST的输入是words-id,输入是pdf-ids(这些indexes用于解析高斯混合模型)(具体请看http://kaldi-asr.org/doc/graph_recipe_test.html)
-    usage: utils/mkgraph.sh [options] <lang-dir> <model-dir> <graphdir>
+    usage: utils/mkgraph.sh [options] <lang-dir> <model-dir> <graph-dir>
      e.g.: utils/mkgraph.sh data/lang_test exp/tri1/ exp/tri1/graph
     <lang-dir>:lang文件路径
     <model-dir>:模型存放路径,对应的是train_xx.sh的exp-dir
-    <graphdir>:图存放路径,一般都是在model下面的graph文件夹下
+    <graph-dir>:图存放路径,一般都是在model下面的graph文件夹下
 
 =========================decode部分==========================
 12.decode.sh
