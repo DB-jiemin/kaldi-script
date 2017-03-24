@@ -1,0 +1,4 @@
+ark指的的是文件格式
+s：sorted代表排序
+cs：call sorted 代表调用排序文件
+t：代表txt文件，供用户直接读取

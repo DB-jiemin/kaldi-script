@@ -1,0 +1,5 @@
+首先安装mongodb
+
+1、进入mongodb的bin目录下，运行./mongod(且误关闭此控制台程序)
+2、在另一个控制台中运行 mongodb的bin目录下的./mongo
+3、可以在此窗口中进行mongodb的操作

@@ -100,7 +100,7 @@ lex.fst指的是L.fst
     <data-dir>:数据路径
     <lang-dir>:lang文件夹路径
     <exp-dir>:mono模型存放路径
-
+----------------------------------------------------------- 
 5.train_deltas.sh
     通过deltas-deltas+deltas特征训练模型
     二阶差分
@@ -112,7 +112,7 @@ lex.fst指的是L.fst
     <lang-dir>:lang文件夹路径
     <alignment-dir>:之前执行align_si.sh结果存放路径
     <exp-dir>:模型存放路径
-
+----------------------------------------------------------- 
 6.train_sat.sh
     SAT(Speaker Adapted Training)说话者适应训练,SAT可以在LDA + MLLT或者 delta 和 delta-delta特征上训练,if there are no transforms supplied in the alignment directory, is will estimate transforms itself befor building the tree if there are no Trainings supplied in the alignment directory, is will estimate transforms itself befor building the tree(and in any case, it estimates transforms a number of times during training).
     usage: steps/train_sat.sh <#leaves> <#gauss> <data> <lang> <ali-dir> <exp-dir>
@@ -123,7 +123,7 @@ lex.fst指的是L.fst
     <lang>:lang文件夹路径
     <ali-dir>:对齐文件路径,上次执行对齐操作存放的路径
     <exp-dir>:模型存放路径
-    
+----------------------------------------------------------- 
 7.train_lda_mllt.sh
     LDA + MLLT引用方法:在计算MFCC特征之后,进行转换.通过拼接交叉的一些帧,通过使用LDA降低维数,默认维数是40.然后在多次迭代中估计,对角MLLT或CTC被认为是一个对角转换.(具体细节:http://kaldi-asr.org/doc/transform.html)
     会得到一些.mat的文件,这些文件是用来做全局特征变换用的
@@ -135,8 +135,19 @@ lex.fst指的是L.fst
     <lang>:lang文件路径
     <alignments>:对齐文件路径,上次执行对齐操作存放的路径
     <exp-dir>:模型存放路径
-
-8.steps/make_denlats.sh
+-----------------------------------------------------------
+8.train_quick.sh
+    它可以使用align_fmllr.sh对齐的文件
+    usage: steps/train_quick.sh <num-leaves> <num-gauss> <data> <lang> <ali-dir> <exp-dir>
+     e.g.: steps/train_quick.sh 2500 15000 data/train_si284 data/lang exp/tri3c_ali_si284 exp/tri4b
+    <num-leaves>:初始高斯数
+    <num-gauss>:总高斯数
+    <data>:训练数据路径
+    <lang>:lang文件夹路径
+    <ali-dir>:对齐文件路径,上次执行对齐操作的文件路径
+    <exp-dir>:训练模型存放路径
+-----------------------------------------------------------
+9.steps/make_denlats.sh
     做一个标准的lattices
     usage:steps/make_denlats.sh [options] <data-dir> <lang-dir> <src-dir> <exp-dir>
      e.g.:steps/make_denlats.sh data/train data/lang exp/tri1 exp/tri1_denlats
@@ -147,7 +158,7 @@ lex.fst指的是L.fst
     exp-dir:denominstor lattices 存放路径
 
 =========================mkgraph部分=========================
-9.mkgraph.sh
+10.mkgraph.sh
     这个脚本通过HCLG(代表了语言模型、发音字典、上下文依赖和HMM模型),输出一个FST(有限状态机),FST的输入是words-id,输入是pdf-ids(这些indexes用于解析高斯混合模型)(具体请看http://kaldi-asr.org/doc/graph_recipe_test.html)
     usage: utils/mkgraph.sh [options] <lang-dir> <model-dir> <graphdir>
      e.g.: utils/mkgraph.sh data/lang_test exp/tri1/ exp/tri1/graph
@@ -156,7 +167,7 @@ lex.fst指的是L.fst
     <graphdir>:图存放路径,一般都是在model下面的graph文件夹下
 
 =========================decode部分==========================
-10.decode.sh
+11.decode.sh
     --transform-dir选项支持已经存在的fMLLR转换
     trans.1 和 fMLLR有什么关系? trans.1是做的全局变换
     trans.1 就是做了fMLLR转换的结果
@@ -167,7 +178,7 @@ lex.fst指的是L.fst
     <data-dir>:解码的数据路径
     <decode-dir>:解码结果存放路径
 
-11.decode_fmllr.sh
+12.decode_fmllr.sh
     在这个脚本中有三个model可能被用到:
     1.Decoding script that does fMLLR.  This can be on top of delta+delta-delta, or LDA+MLLT features.
      There are 3 models involved potentially in this script,
@@ -195,8 +206,7 @@ Model              Default source:
     <decode-dir>:解码结果存放路径
     ----------------------------------------------------------
 =========================align部分===========================
-
-12.align_si.sh
+13.align_si.sh
     计算训练对齐方式,delta 或者 LDA + MLLT特征
     也就是说这个脚本支持 train_mono.sh 和 train_deltas.sh两个脚本的训练结果的对齐
     如果选择了--use-graphs true选项,它将使用它进行训练
@@ -209,7 +219,7 @@ Model              Default source:
     <src-dir>:模型存放的路径
     <align-dir>:对齐文件存放路径
     
-13.align_fmllr.sh    
+14.align_fmllr.sh    
     对齐操作,假设特征是(LDA + MLLT or delta + delta - delta) + fMLLR(可能有SAT模型),使用final.alimdl计算第一次对齐(或final.mdl 当没有final.alimdl时),然后做两次迭代fMLLR估计.
     usage: steps/align_fmllr.sh <data-dir> <lang-dir> <src-dir> <align-dir>
      e.g.: steps/align_fmllr.sh data/train data/lang exp/tri1 exp/tri1_ali
@@ -307,7 +317,7 @@ matrix-dim
     e.g.:matrix-dim final.mat | cut -f 2
 ----------------------------------------------------------------------------------------- 
 gmm-align
-    在给定的GMM模型上对齐特征
+    在给定的GMM模型上对齐特征,获得一句话状态级别的对齐结果.
     usage: gmm-align [options] tree-in model-in lexicon-fst-in feature-rspecifier transcriptions-rspecifier alignments-wspecifier
     e.g.: gmm-align tree 1.mdl lex.fst scp:train.scp ark:train.tra ark:1.ali
 ----------------------------------------------------------------------------------------- 
@@ -373,4 +383,99 @@ wav-to-duration
     输出wav文件时长
     usage: wav-to-duration [options] <wav-rspecifier> <duration-wspecifier>
      e.g.: wav-to-duration scp:wav.scp ark,t:-
+-----------------------------------------------------------------------------------------
+show-transitions
+    usage: show-transitions <phones-symbol-table> <transition/model-file> [<occs-file>]
+     e.g.: show-transitions phones.txt final.mdl
+        or show-transitions phones.txt final.mdl 1.occs
+     输出内容:
+         Transition-state 1: phone = sil hmm-state = 0 pdf = 0
+	  Transition-id = 1 p = 0.728349 [self-loop]
+	   Transition-id = 2 p = 0.27165 [0 -> 1]
+           ......
+     使用这个命令可以看到phones-state和pdf关联关系
+     一个pdf可能对应几个phone
+-----------------------------------------------------------------------------------------
+discriminative-get-supervision
+-----------------------------------------------------------------------------------------
+nnet3-train
+    训练nnet3神经网络,使用反向传播和SGD(随机梯度下降).minibatches可以使用nnet3-merge-egs
+    通过管道进行输入.这个训练程序是单线程的,如果需要多线程可以使用nnet3-train-parallel(适
+    合cpu).
+    Usage: nnet3-train [options] <raw-model-in> <training-examples-in> <raw-model-out>
+     e.g.: nnet3-train 1.raw 'ark:nnet3-merge-egs 1.egs ark:-|' 2.raw
+    <raw-model-in>:原始模型,已有的模型输入.raw文件
+    <training-examples-in>:训练样本输入,ark:nnet3-merge-egs 1.egs ark:-
+    <raw-model-out>:训练模型输出
+-----------------------------------------------------------------------------------------
+nnet3-discriminative-merge-egs
+-----------------------------------------------------------------------------------------
+nnet3-discriminative-compute-objf
+-----------------------------------------------------------------------------------------
+nnet3-discriminative-get-egs
+-----------------------------------------------------------------------------------------
+nnet3-shuffle-egs
+-----------------------------------------------------------------------------------------
+nnet3-discriminative-subset-egs
+-----------------------------------------------------------------------------------------
+nnet3-copy
+-----------------------------------------------------------------------------------------
+nnet3-acc-lda-stats
+-----------------------------------------------------------------------------------------
+nnet3-compute-from-egs
+-----------------------------------------------------------------------------------------
+nnet3-merge-egs
+    
+-----------------------------------------------------------------------------------------
+nnet3-am-init
+-----------------------------------------------------------------------------------------
+nnet3-get-egs
+-----------------------------------------------------------------------------------------
+nnet3-latgen-faster-parallel
+-----------------------------------------------------------------------------------------
+nnet3-align-compiled
+-----------------------------------------------------------------------------------------
+nnet3-info
+-----------------------------------------------------------------------------------------
+nnet3-show-progress
+-----------------------------------------------------------------------------------------
+nnet3-am-train-transitions
+-----------------------------------------------------------------------------------------
+nnet3-compute-prob
+-----------------------------------------------------------------------------------------
+nnet3-init
+    从配置文件初始化nnet3神经网络,输出原始的nnet并且不包含转移模型和先验概率等相关信息.
+    搜索/egs/wsj/s5/steps/nnet3/可以添加层到已有的模型.
+    Usage: nnet3-init [options] [<existing-model-in>] <config-in> <raw-nnet-out>
+    e.g.: nnet3-init nnet.config 0.raw 从config初始化一个网络模型
+      or: nnet3-init 1.raw nnet.config 2.raw 给现有的模型添加layer
+      See also: nnet3-copy, nnet3-info
+-----------------------------------------------------------------------------------------
+nnet3-discriminative-compute-from-egs
+-----------------------------------------------------------------------------------------
+nnet3-am-info
+-----------------------------------------------------------------------------------------
+nnet3-combine
+-----------------------------------------------------------------------------------------
+nnet3-average
+-----------------------------------------------------------------------------------------
+nnet3-discriminative-copy-egs
+-----------------------------------------------------------------------------------------
+nnet3-copy-egs
+-----------------------------------------------------------------------------------------
+nnet3-latgen-faster
+-----------------------------------------------------------------------------------------
+nnet3-get-egs-dense-targets
+-----------------------------------------------------------------------------------------
+nnet3-am-adjust-priors
+-----------------------------------------------------------------------------------------
+nnet3-discriminative-shuffle-egs
+-----------------------------------------------------------------------------------------
+nnet3-subset-egs
+-----------------------------------------------------------------------------------------
+nnet3-compute
+-----------------------------------------------------------------------------------------
+nnet3-discriminative-train
+-----------------------------------------------------------------------------------------
+nnet3-am-copy
 -----------------------------------------------------------------------------------------
